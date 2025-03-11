@@ -1,0 +1,223 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 220 10% 20%;
+
+        --card: 0 0% 100%;
+        --card-foreground: 220 10% 20%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 220 10% 20%;
+
+        --primary: 220 70% 50%;
+        --primary-foreground: 0 0% 100%;
+
+        --secondary: 210 20% 96%;
+        --secondary-foreground: 220 10% 20%;
+
+        --muted: 210 20% 96%;
+        --muted-foreground: 220 10% 40%;
+
+        --accent: 220 70% 95%;
+        --accent-foreground: 220 70% 40%;
+
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
+
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 222.2 84% 4.9%;
+
+        --radius: 0.75rem;
+
+        --sidebar-background: 0 0% 98%;
+        --sidebar-foreground: 240 5.3% 26.1%;
+        --sidebar-primary: 240 5.9% 10%;
+        --sidebar-primary-foreground: 0 0% 98%;
+        --sidebar-accent: 240 4.8% 95.9%;
+        --sidebar-accent-foreground: 240 5.9% 10%;
+        --sidebar-border: 220 13% 91%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+
+        --pending: 40 100% 60%;
+        --complete: 160 100% 40%;
+        --progress-value: 50%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+    }
+
+    html {
+        @apply scroll-smooth;
+    }
+}
+
+@layer utilities {
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    .glass-panel {
+        @apply backdrop-blur-sm bg-white/90 border border-white/20 shadow-sm;
+    }
+
+    .hover-scale {
+        @apply transition-transform duration-300 hover:scale-[1.02];
+    }
+
+    .focus-ring {
+        @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-50;
+    }
+
+    .smooth-transition {
+        @apply transition-all duration-300 ease-in-out;
+    }
+
+    .page-transition-enter {
+        @apply opacity-0 transform translate-y-4;
+    }
+
+    .page-transition-enter-active {
+        @apply opacity-100 transform translate-y-0 transition-all duration-300 ease-out;
+    }
+
+    .page-transition-exit {
+        @apply opacity-100 transform translate-y-0;
+    }
+
+    .page-transition-exit-active {
+        @apply opacity-0 transform translate-y-4 transition-all duration-300 ease-in;
+    }
+}
+
+.badge-chip {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-pending {
+    @apply badge-chip bg-yellow-100 text-yellow-800;
+}
+
+.badge-complete {
+    @apply badge-chip bg-green-100 text-green-800;
+}
+
+.badge-paid {
+    @apply badge-chip bg-blue-100 text-blue-800;
+}
+
+.badge-unpaid {
+    @apply badge-chip bg-red-100 text-red-800;
+}
+
+.input-spinner {
+    @apply flex items-center justify-between border border-input rounded-md bg-background;
+}
+
+.input-spinner button {
+    @apply px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50 hover:bg-muted transition-colors;
+}
+
+.input-spinner input {
+    @apply w-16 text-center border-none focus:outline-none focus:ring-0;
+}
+
+.card-hover {
+    @apply relative overflow-hidden rounded-lg border border-border/40 bg-background p-6 shadow-sm transition-all hover:shadow-md hover:border-border/80;
+}
+
+.icon-button {
+    @apply p-2 rounded-full hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+}
+
+.section-title {
+    @apply text-2xl font-semibold tracking-tight;
+}
+
+.section-subtitle {
+    @apply text-base text-muted-foreground;
+}
+
+.progress-bar {
+    @apply relative w-full h-2 bg-secondary rounded-full overflow-hidden;
+}
+
+.progress-bar-fill {
+    @apply absolute h-full left-0 top-0 rounded-full bg-primary;
+    animation: progress-fill 1s ease-out forwards;
+}
+
+/* Animations for page transitions */
+.fade-enter {
+    opacity: 0;
+}
+
+.fade-enter-active {
+    opacity: 1;
+    transition: opacity 300ms;
+}
+
+.fade-exit {
+    opacity: 1;
+}
+
+.fade-exit-active {
+    opacity: 0;
+    transition: opacity 300ms;
+}
+
+/* Toast animations */
+.toast-enter {
+    transform: translateY(100%);
+    opacity: 0;
+}
+
+.toast-enter-active {
+    transform: translateY(0);
+    opacity: 1;
+    transition: all 300ms;
+}
+
+.toast-exit {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.toast-exit-active {
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: all 300ms;
+}
+
+/* Modal animations */
+.modal-overlay {
+    @apply fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center;
+}
+
+.modal-content {
+    @apply relative bg-background rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto animate-scale-in;
+}
+
+/* Clean up App.css styles and merge here */
+#root {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+}
