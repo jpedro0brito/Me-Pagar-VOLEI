@@ -88,10 +88,10 @@ export const getPaymentProgress = (match: Match): number => {
 /**
  * Generate a new player with default values
  */
-export const createNewPlayer = (name: string = ""): Player => ({
+export const createNewPlayer = (name: string = "", hoursPlayed: number = 1): Player => ({
     id: crypto.randomUUID(),
     name,
-    hoursPlayed: 1,
+    hoursPlayed,
     paid: false
 });
 
@@ -104,6 +104,6 @@ export const createNewMatch = (): Match => ({
     totalHours: 1,
     date: new Date().toISOString(),
     pixKey: "",
-    players: [createNewPlayer()],
+    players: [],
     status: 'pending'
 });

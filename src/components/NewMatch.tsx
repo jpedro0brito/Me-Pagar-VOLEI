@@ -85,7 +85,7 @@ const NewMatch: React.FC = () => {
     const handleAddPlayer = () => {
         setMatch(prev => ({
             ...prev,
-            players: [...prev.players, createNewPlayer()]
+            players: [...prev.players, createNewPlayer('', match.totalHours)]
         }));
     };
 
