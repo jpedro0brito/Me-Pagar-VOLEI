@@ -27,18 +27,18 @@ const Header: React.FC = () => {
                                 "hover:bg-muted"
                         )}
                     >
-                        Nova Partida
+                        Histórico
                     </Link>
                     <Link
-                        to="/history"
+                        to="/Create"
                         className={cn(
                             "text-sm font-medium transition-colors focus-ring px-3 py-2 rounded-md",
-                            location.pathname === '/history' ?
+                            location.pathname === '/Create' ?
                                 "bg-accent text-accent-foreground" :
                                 "hover:bg-muted"
                         )}
                     >
-                        Histórico
+                        Nova Partida
                     </Link>
                 </nav>
             </div>

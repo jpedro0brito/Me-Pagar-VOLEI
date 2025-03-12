@@ -267,12 +267,13 @@ export const dbService = {
         }
 
         // 2) Verifica se o jogador existe
-        const player = match.players.find((p) => p.id === playerId);
-        if (!player) {
+        const indexPlayer = match.players.findIndex((p) => p.id === playerId);
+        if (indexPlayer === -1) {
             throw new Error(`Player with ID ${playerId} not found in match`);
         }
 
         // 3) Atualiza o player no Supabase
+        const player = match.players[indexPlayer];
         const paymentDate = paid ? new Date().toISOString() : null;
         const { data: updatedPlayer, error: updatePlayerError } = await supabase
             .from('players')
@@ -290,6 +291,9 @@ export const dbService = {
             console.error('Erro ao atualizar player:', updatePlayerError);
             throw updatePlayerError;
         }
+
+        // Substitui o objeto encontrado por um novo objeto
+        match.players[indexPlayer] = updatedPlayer;
 
         // 4) Recalcula status do match
         const updatedMatchObj = updateMatchStatus(match);

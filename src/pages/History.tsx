@@ -13,7 +13,7 @@ const History: React.FC = () => {
     const [matches, setMatches] = useState([]);
 
     const handleNewMatch = () => {
-        navigate('/');
+        navigate('/Create');
     };
 
     const handleOpenPendingPayments = async () => {

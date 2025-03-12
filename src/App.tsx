@@ -23,8 +23,8 @@ const App = () => (
             <Sonner position="top-right" closeButton richColors />
             <BrowserRouter>
                 <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/history" element={<History />} />
+                    <Route path="/" element={<History />} />
+                    <Route path="/Create" element={<Index />} />
                     <Route path="*" element={<NotFound />} />
                 </Routes>
             </BrowserRouter>
