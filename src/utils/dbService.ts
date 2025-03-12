@@ -1,166 +1,347 @@
 import { Match, Player, updateMatchStatus } from './calculations';
 import { toast } from "@/hooks/use-toast";
+import { createClient } from '@supabase/supabase-js';
 
-// Mock db service using localStorage until connected to SQL Server
-const STORAGE_KEY = 'volleyball-matches';
+
+// Use suas variáveis de ambiente ou defina diretamente (não recomendado)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Cria o cliente
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
- * Initialize connection to SQL Server (placeholder for actual implementation)
- * In a real implementation, this would use a library like node-mssql
+ * Converte as linhas do Supabase (matches e players) 
+ * em um objeto Match com um array `players`.
  */
-const initDatabaseConnection = () => {
-    console.log('Database connection would be initialized here with actual credentials');
-    // In a real implementation, this would connect to SQL Server
-    return {
-        connected: true,
-        connectionId: 'mock-connection-id'
-    };
-};
+async function loadAllMatches(): Promise<Match[]> {
+    // 1) Busca todas as partidas
+    const { data: matchesData, error: matchesError } = await supabase
+        .from('matches')
+        .select('*');
 
-// For now, we'll simulate with localStorage
-const loadMatches = (): Match[] => {
-    try {
-        const storedMatches = localStorage.getItem(STORAGE_KEY);
-        return storedMatches ? JSON.parse(storedMatches) : [];
-    } catch (error) {
-        console.error('Error loading matches from storage:', error);
-        return [];
-    }
-};
-
-const saveMatches = (matches: Match[]): void => {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(matches));
-    } catch (error) {
-        console.error('Error saving matches to storage:', error);
-        toast({
-            title: "Error",
-            description: "Failed to save match data",
+    if (matchesError) {
+        console.error('Erro ao buscar matches:', matchesError);
+        toast?.({
+            title: "Erro",
+            description: "Falha ao buscar partidas",
             variant: "destructive"
         });
+        return [];
     }
-};
+
+    // 2) Busca todos os jogadores
+    const { data: playersData, error: playersError } = await supabase
+        .from('players')
+        .select('*');
+
+    if (playersError) {
+        console.error('Erro ao buscar players:', playersError);
+        toast?.({
+            title: "Erro",
+            description: "Falha ao buscar jogadores",
+            variant: "destructive"
+        });
+        return [];
+    }
+
+    // 3) Combina as duas listas em um array de Match
+    //    Partimos do princípio de que "playersData" tem um campo "matchId"
+    const matchMap = new Map<string, Match>();
+
+    // Inicializa o map de partidas
+    (matchesData || []).forEach((m) => {
+        matchMap.set(m.id, {
+            ...m,
+            players: [] // adicionaremos já já
+        });
+    });
+
+    // Associa cada player à sua partida
+    (playersData || []).forEach((p) => {
+        const match = matchMap.get(p.matchId);
+        if (match) {
+            match.players.push(p);
+        }
+    });
+
+    return Array.from(matchMap.values());
+}
 
 /**
- * Database service for match operations
+ * Carrega uma única partida pelo ID, incluindo seus players.
  */
+async function loadMatchById(id: string): Promise<Match | undefined> {
+    // Busca a partida
+    const { data: match, error: matchError } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+    if (matchError || !match) {
+        console.error(`Erro ao buscar match ${id}:`, matchError);
+        return undefined;
+    }
+
+    // Busca os players relacionados
+    const { data: players, error: playersError } = await supabase
+        .from('players')
+        .select('*')
+        .eq('matchId', id);
+
+    if (playersError) {
+        console.error(`Erro ao buscar players para match ${id}:`, playersError);
+        return { ...match, players: [] };
+    }
+
+    return { ...match, players };
+}
+
 export const dbService = {
-    // Get all matches
+    /**
+     * Get all matches
+     */
     getMatches: async (): Promise<Match[]> => {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 300));
-        return loadMatches();
+        try {
+            return await loadAllMatches();
+        } catch (error) {
+            console.error('Erro getMatches:', error);
+            return [];
+        }
     },
 
-    // Get match by ID
+    /**
+     * Get match by ID
+     */
     getMatchById: async (id: string): Promise<Match | undefined> => {
-        const matches = loadMatches();
-        return matches.find(match => match.id === id);
+        try {
+            return await loadMatchById(id);
+        } catch (error) {
+            console.error('Erro getMatchById:', error);
+            return undefined;
+        }
     },
 
-    // Create a new match
+    /**
+     * Create a new match
+     */
     createMatch: async (match: Match): Promise<Match> => {
-        const matches = loadMatches();
+        try {
+            // 1) Calcula status/valores
+            const calculatedMatch = updateMatchStatus(match);
 
-        // Update match with calculated amounts and status
-        const calculatedMatch = updateMatchStatus(match);
+            // 2) Insere a partida na tabela "matches"
+            //    (Supondo que 'id', 'courtCost', etc. existam como colunas)
+            const { data: insertedMatches, error: insertMatchError } = await supabase
+                .from('matches')
+                .insert([{
+                    id: calculatedMatch.id,
+                    courtCost: calculatedMatch.courtCost,
+                    totalHours: calculatedMatch.totalHours,
+                    date: calculatedMatch.date,
+                    pixKey: calculatedMatch.pixKey,
+                    status: calculatedMatch.status,
+                    completionDate: calculatedMatch.completionDate ?? null
+                }])
+                .select();
 
-        matches.push(calculatedMatch);
-        saveMatches(matches);
+            if (insertMatchError || !insertedMatches || insertedMatches.length === 0) {
+                throw new Error(insertMatchError?.message || 'Falha ao inserir match');
+            }
 
-        return calculatedMatch;
+            // 3) Insere os players (se existirem) na tabela "players"
+            if (calculatedMatch.players?.length) {
+                const { error: insertPlayersError } = await supabase
+                    .from('players')
+                    .insert(
+                        calculatedMatch.players.map((p) => ({
+                            id: p.id,
+                            matchId: calculatedMatch.id,
+                            name: p.name,
+                            hoursPlayed: p.hoursPlayed,
+                            amount: p.amount,
+                            paid: p.paid,
+                            paymentDate: p.paymentDate ?? null,
+                            receiptUrl: p.receiptUrl ?? null
+                        }))
+                    );
+
+                if (insertPlayersError) {
+                    throw new Error(insertPlayersError.message);
+                }
+            }
+
+            // 4) Retorna a partida completa (com players)
+            const finalMatch = await loadMatchById(calculatedMatch.id);
+            if (!finalMatch) {
+                throw new Error('Falha ao carregar partida após criação');
+            }
+            return finalMatch;
+        } catch (error) {
+            console.error('Erro ao criar partida:', error);
+            toast?.({
+                title: "Erro",
+                description: "Falha ao criar partida",
+                variant: "destructive"
+            });
+            throw error;
+        }
     },
 
-    // Update existing match
+    /**
+     * Update existing match
+     */
     updateMatch: async (match: Match): Promise<Match> => {
-        const matches = loadMatches();
-        const index = matches.findIndex(m => m.id === match.id);
-
-        if (index === -1) {
+        // 1) Verifica se existe
+        const existing = await loadMatchById(match.id);
+        if (!existing) {
             throw new Error(`Match with ID ${match.id} not found`);
         }
 
-        // Update match with calculated amounts and status
+        // 2) Atualiza status/valores
         const updatedMatch = updateMatchStatus(match);
 
-        matches[index] = updatedMatch;
-        saveMatches(matches);
+        // 3) Faz o update na tabela "matches"
+        const { data, error } = await supabase
+            .from('matches')
+            .update({
+                courtCost: updatedMatch.courtCost,
+                totalHours: updatedMatch.totalHours,
+                date: updatedMatch.date,
+                pixKey: updatedMatch.pixKey,
+                status: updatedMatch.status,
+                completionDate: updatedMatch.completionDate ?? null
+            })
+            .eq('id', updatedMatch.id)
+            .select();
 
-        return updatedMatch;
+        if (error || !data || data.length === 0) {
+            console.error('Erro ao atualizar match:', error);
+            throw new Error(error?.message || 'Falha ao atualizar match');
+        }
+
+        // (Não atualizamos players aqui; se quiser, faça método separado)
+        // 4) Retorna o match completo com players
+        const final = await loadMatchById(match.id);
+        if (!final) {
+            throw new Error('Falha ao recarregar match após update');
+        }
+        return final;
     },
 
-    // Delete a match
+    /**
+     * Delete a match
+     */
     deleteMatch: async (id: string): Promise<void> => {
-        const matches = loadMatches();
-        const filteredMatches = matches.filter(match => match.id !== id);
-        saveMatches(filteredMatches);
+        // Deleta a partida (se o FK de players tiver ON DELETE CASCADE, deleta também)
+        const { error } = await supabase
+            .from('matches')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Erro ao deletar match:', error);
+            toast?.({
+                title: "Erro",
+                description: "Falha ao deletar partida",
+                variant: "destructive"
+            });
+            throw error;
+        }
     },
 
-    // Update player payment status
+    /**
+     * Update player payment status
+     */
     updatePlayerPayment: async (
         matchId: string,
         playerId: string,
         paid: boolean,
         receiptUrl?: string
     ): Promise<Match> => {
-        const matches = loadMatches();
-        const matchIndex = matches.findIndex(m => m.id === matchId);
-
-        if (matchIndex === -1) {
+        // 1) Carrega a partida
+        const match = await loadMatchById(matchId);
+        if (!match) {
             throw new Error(`Match with ID ${matchId} not found`);
         }
 
-        const match = { ...matches[matchIndex] };
-        const playerIndex = match.players.findIndex(p => p.id === playerId);
-
-        if (playerIndex === -1) {
+        // 2) Verifica se o jogador existe
+        const player = match.players.find((p) => p.id === playerId);
+        if (!player) {
             throw new Error(`Player with ID ${playerId} not found in match`);
         }
 
-        // Update player with payment info
-        const paymentDate = paid ? new Date().toISOString() : undefined;
+        // 3) Atualiza o player no Supabase
+        const paymentDate = paid ? new Date().toISOString() : null;
+        const { data: updatedPlayer, error: updatePlayerError } = await supabase
+            .from('players')
+            .update({
+                paid,
+                paymentDate,
+                receiptUrl: paid ? (receiptUrl || player.receiptUrl) : null
+            })
+            .eq('id', playerId)
+            .eq('matchId', matchId)
+            .select()
+            .single();
 
-        match.players[playerIndex] = {
-            ...match.players[playerIndex],
-            paid,
-            paymentDate,
-            receiptUrl: paid ? (receiptUrl || match.players[playerIndex].receiptUrl) : undefined
-        };
+        if (updatePlayerError) {
+            console.error('Erro ao atualizar player:', updatePlayerError);
+            throw updatePlayerError;
+        }
 
-        // Update match status based on all players payment status
-        const updatedMatch = updateMatchStatus(match);
+        // 4) Recalcula status do match
+        const updatedMatchObj = updateMatchStatus(match);
 
-        matches[matchIndex] = updatedMatch;
-        saveMatches(matches);
+        // 5) Atualiza o match (se status mudou)
+        const { error: updateMatchError } = await supabase
+            .from('matches')
+            .update({
+                status: updatedMatchObj.status,
+                completionDate: updatedMatchObj.completionDate ?? null
+            })
+            .eq('id', matchId);
 
-        return updatedMatch;
+        if (updateMatchError) {
+            console.error('Erro ao atualizar status da match:', updateMatchError);
+            throw updateMatchError;
+        }
+
+        // 6) Retorna o match atualizado
+        const final = await loadMatchById(matchId);
+        if (!final) {
+            throw new Error('Falha ao recarregar partida após pagamento');
+        }
+        return final;
     },
 
-    // Get filtered matches
+    /**
+     * Get filtered matches
+     */
     getFilteredMatches: async (
         filter: 'all' | 'pending' | 'complete' | 'unpaidByPlayer',
         playerId?: string
     ): Promise<Match[]> => {
-        const matches = loadMatches();
+        // Exemplo simples: busca todas e filtra em memória
+        // (Para grandes volumes, use WHERE .eq('status', 'pending') etc.)
+        const allMatches = await dbService.getMatches();
 
         switch (filter) {
             case 'pending':
-                return matches.filter(match => match.status === 'pending');
+                return allMatches.filter((m) => m.status === 'pending');
             case 'complete':
-                return matches.filter(match => match.status === 'complete');
+                return allMatches.filter((m) => m.status === 'complete');
             case 'unpaidByPlayer':
-                if (!playerId) return matches;
-                return matches.filter(match =>
-                    match.players.some(player => player.id === playerId && !player.paid)
+                if (!playerId) return allMatches;
+                return allMatches.filter((m) =>
+                    m.players.some((p) => p.id === playerId && !p.paid)
                 );
             case 'all':
             default:
-                return matches;
+                return allMatches;
         }
-    }
+    },
 };
-
-// Initialize connection
-initDatabaseConnection();
 
 export default dbService;
