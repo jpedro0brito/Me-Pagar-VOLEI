@@ -22,7 +22,7 @@ const UploadReceipt: React.FC<UploadReceiptProps> = ({ player, matchId, onUpload
         const selectedFile = e.target.files?.[0];
         if (!selectedFile) return;
 
-        // Validate file type (images and PDF)
+        // Validação do tipo de arquivo (imagens e PDF)
         const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
         if (!validTypes.includes(selectedFile.type)) {
             toast({
@@ -33,7 +33,7 @@ const UploadReceipt: React.FC<UploadReceiptProps> = ({ player, matchId, onUpload
             return;
         }
 
-        // Validate file size (max 5MB)
+        // Validação do tamanho do arquivo (máx. 5MB)
         if (selectedFile.size > 5 * 1024 * 1024) {
             toast({
                 title: "Arquivo muito grande",
@@ -45,7 +45,7 @@ const UploadReceipt: React.FC<UploadReceiptProps> = ({ player, matchId, onUpload
 
         setFile(selectedFile);
 
-        // Create preview for images
+        // Cria preview para imagens
         if (selectedFile.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -53,7 +53,7 @@ const UploadReceipt: React.FC<UploadReceiptProps> = ({ player, matchId, onUpload
             };
             reader.readAsDataURL(selectedFile);
         } else if (selectedFile.type === 'application/pdf') {
-            // For PDFs, show a placeholder
+            // Para PDFs, mostra um placeholder enquanto o arquivo é lido para upload
             setPreviewUrl('/placeholder.svg');
         }
     };
@@ -63,15 +63,11 @@ const UploadReceipt: React.FC<UploadReceiptProps> = ({ player, matchId, onUpload
 
         setIsUploading(true);
         try {
-            // In a real app, you would upload to a server/storage
-            // Here we'll simulate by creating a data URL
+            // Simula o upload lendo o arquivo como Data URL
             const reader = new FileReader();
 
             reader.onloadend = async () => {
-                // Get base64 data or use a placeholder for PDF
                 const dataUrl = reader.result as string;
-
-                // Call the upload callback with the receipt URL
                 await onUpload(matchId, player.id, dataUrl);
 
                 toast({
@@ -95,11 +91,27 @@ const UploadReceipt: React.FC<UploadReceiptProps> = ({ player, matchId, onUpload
         }
     };
 
+    // Função para converter dataURL em Blob e abrir em nova aba
+    const openPDF = (dataUrl: string) => {
+        const arr = dataUrl.split(',');
+        const mimeMatch = dataUrl.match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'application/pdf';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+    };
+
     const viewExistingReceipt = () => {
         if (player.receiptUrl) {
-            // For PDFs, open in a new tab; for images, show in dialog
+            // Se for PDF, abre via o Blob, senão exibe na dialog
             if (player.receiptUrl.includes('application/pdf')) {
-                window.open(player.receiptUrl, '_blank');
+                openPDF(player.receiptUrl);
             } else {
                 setPreviewUrl(player.receiptUrl);
                 setIsOpen(true);
@@ -132,7 +144,7 @@ const UploadReceipt: React.FC<UploadReceiptProps> = ({ player, matchId, onUpload
             )}
 
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="w-full sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Comprovante de Pagamento</DialogTitle>
                         <DialogDescription>

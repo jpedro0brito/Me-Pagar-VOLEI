@@ -90,13 +90,13 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
     const handleUploadReceipt = async (matchId: string, playerId: string, receiptUrl: string) => {
         setIsUpdating(true);
         try {
-            // If player has not been marked as paid yet, mark as paid with receipt
+            // Se o jogador ainda não foi marcado como pago, marca com o comprovante
             const player = match.players.find(p => p.id === playerId);
 
             if (player && !player.paid) {
                 await onUpdatePlayerPayment(matchId, playerId, true, receiptUrl);
             } else {
-                // Just update the receipt
+                // Apenas atualiza o comprovante
                 await onUpdatePlayerPayment(matchId, playerId, true, receiptUrl);
             }
         } catch (error) {
@@ -112,21 +112,21 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
     };
 
     const sortedPlayers = [...match.players].sort((a, b) => {
-        // First by payment status (unpaid first)
+        // Primeiro pela situação do pagamento (não pagos primeiro)
         if (a.paid !== b.paid) return a.paid ? 1 : -1;
-        // Then alphabetically by name
+        // Depois em ordem alfabética pelo nome
         return a.name.localeCompare(b.name);
     });
 
-    // Group players by payment status
+    // Agrupa jogadores por status de pagamento
     const unpaidPlayers = sortedPlayers.filter(p => !p.paid);
     const paidPlayers = sortedPlayers.filter(p => p.paid);
 
     return (
         <Dialog open={isOpen} onOpenChange={() => onClose()}>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4">
                 <DialogHeader className="space-y-1.5">
-                    <DialogTitle className="text-2xl">Detalhes da Partida</DialogTitle>
+                    <DialogTitle className="text-xl sm:text-2xl">Detalhes da Partida</DialogTitle>
                     <DialogDescription className="flex flex-wrap gap-2 items-center">
                         {match.status === 'complete' ? (
                             <span className="badge-complete">Concluído</span>
@@ -147,7 +147,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
                 </DialogHeader>
 
                 <div className="grid gap-6">
-                    {/* Match Summary */}
+                    {/* Resumo da Partida */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         <div className="p-4 bg-secondary/50 rounded-lg">
                             <span className="text-sm font-medium text-muted-foreground">Duração</span>
@@ -176,7 +176,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
                         </div>
                     </div>
 
-                    {/* Payment Progress */}
+                    {/* Progresso de Pagamento */}
                     <div>
                         <ProgressBar value={progress} />
                         <div className="mt-2 text-sm text-muted-foreground">
@@ -187,11 +187,11 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
                         </div>
                     </div>
 
-                    {/* Players List */}
+                    {/* Lista de Jogadores */}
                     <div className="space-y-4">
                         <h3 className="text-lg font-medium">Jogadores</h3>
 
-                        {/* Unpaid Players (with highlight if any) */}
+                        {/* Jogadores Pendentes de Pagamento */}
                         {unpaidPlayers.length > 0 && (
                             <div className="space-y-3">
                                 <h4 className="text-sm font-semibold text-destructive flex items-center gap-2">
@@ -205,7 +205,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
                                 )}>
                                     {unpaidPlayers.map((player) => (
                                         <div key={player.id} className="p-4">
-                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                                 <div>
                                                     <h4 className="font-medium">{player.name || "Jogador sem nome"}</h4>
                                                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
@@ -215,13 +215,13 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex flex-col sm:flex-row items-stretch gap-2 w-full sm:w-auto">
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() => handleTogglePayment(player)}
                                                         disabled={isUpdating}
-                                                        className="h-8"
+                                                        className="h-8 w-full sm:w-auto"
                                                     >
                                                         Marcar como pago
                                                     </Button>
@@ -239,7 +239,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
                             </div>
                         )}
 
-                        {/* Paid Players */}
+                        {/* Jogadores com Pagamentos Realizados */}
                         {paidPlayers.length > 0 && (
                             <div className="space-y-3">
                                 <h4 className="text-sm font-semibold text-green-600 flex items-center gap-2">
@@ -250,7 +250,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
                                 <div className="rounded-lg border divide-y">
                                     {paidPlayers.map((player) => (
                                         <div key={player.id} className="p-4">
-                                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                                 <div>
                                                     <h4 className="font-medium">{player.name || "Jogador sem nome"}</h4>
                                                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
@@ -266,13 +266,13 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex flex-col sm:flex-row items-stretch gap-2 w-full sm:w-auto">
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() => handleTogglePayment(player)}
                                                         disabled={isUpdating}
-                                                        className="h-8"
+                                                        className="h-8 w-full sm:w-auto"
                                                     >
                                                         Desmarcar pagamento
                                                     </Button>
